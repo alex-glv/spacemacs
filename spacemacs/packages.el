@@ -76,6 +76,7 @@
     info+
     iedit
     indent-guide
+    open-junk-file
     leuven-theme
     linum-relative
     move-text
@@ -543,6 +544,13 @@
       ;; https://bitbucket.org/lyro/evil/issue/502/cursor-is-not-refreshed-in-some-cases
       (add-hook 'post-command-hook 'evil-refresh-cursor)
 
+      ;; hack for speeding up the use of ace-jump-line as a motion
+      ;; https://bitbucket.org/lyro/evil/issue/472/evil-half-cursor-makes-evil-ace-jump-mode
+      (defun evil-half-cursor ()
+        "Change cursor to a half-height box. (This is really just a thick horizontal bar.)"
+        (let ((height (/ (window-pixel-height) (* (window-height) 2))))
+          (setq cursor-type (cons 'hbar height))))
+
       (defun spacemacs/state-color-face (state)
         "Return the symbol of the face for the given STATE."
         (intern (format "spacemacs-%s-face" (symbol-name state))))
@@ -701,7 +709,6 @@ Example: (evil-map visual \"<\" \"<gv\")"
           (recenter nil)))
       (spacemacs|define-micro-state scroll
         :doc "[,] page up [.] page down [<] half page up [>] half page down"
-        :use-minibuffer t
         :execute-binding-on-enter t
         :evil-leader "n." "n," "n<" "n>"
         :bindings
@@ -712,18 +719,21 @@ Example: (evil-map visual \"<\" \"<gv\")"
         ("<" spacemacs/scroll-half-page-up)
         (">" spacemacs/scroll-half-page-down))
 
+      ;; support for auto-indentation inhibition on universal argument
+      (spacemacs|advise-commands
+       "handle-indent" (evil-paste-before evil-paste-after) around
+       "Handle the universal prefix argument for auto-indentation."
+       (let ((prefix (ad-get-arg 0)))
+         (ad-set-arg 0 (unless (equal '(4) prefix) prefix))
+         ad-do-it
+         (ad-set-arg 0 prefix)))
+
       ;; pasting micro-state
-      (defadvice evil-paste-before (after spacemacs/evil-paste-before activate)
-        "Initate the paste micro-state after the execution of evil-paste-before"
-        (unless (evil-ex-p)
-          (spacemacs/paste-micro-state)))
-      (defadvice evil-paste-after (after spacemacs/evil-paste-after activate)
-        "Initate the paste micro-state after the execution of evil-paste-after"
-        (unless (evil-ex-p)
-          (spacemacs/paste-micro-state)))
-      (defadvice evil-visual-paste (after spacemacs/evil-visual-paste activate)
-        "Initate the paste micro-state after the execution of evil-visual-paste"
-        (spacemacs/paste-micro-state))
+      (spacemacs|advise-commands
+       "paste-micro-state"
+       (evil-paste-before evil-paste-after evil-visual-paste) after
+       "Initate the paste micro-state."
+       (unless (evil-ex-p) (spacemacs/paste-micro-state)))
       (defun spacemacs//paste-ms-doc ()
         "The documentation for the paste micro-state."
         (format (concat "[%s/%s] Type [p] or [P] to paste the previous or "
@@ -736,11 +746,14 @@ Example: (evil-map visual \"<\" \"<gv\")"
         ("p" evil-paste-pop)
         ("P" evil-paste-pop-next))
       (unless dotspacemacs-enable-paste-micro-state
-        (ad-disable-advice 'evil-paste-before 'after 'spacemacs/evil-paste-before)
+        (ad-disable-advice 'evil-paste-before 'after
+                           'evil-paste-before-paste-micro-state)
         (ad-activate 'evil-paste-before)
-        (ad-disable-advice 'evil-paste-after 'after 'spacemacs/evil-paste-after)
+        (ad-disable-advice 'evil-paste-after 'after
+                           'evil-paste-after-paste-micro-state)
         (ad-activate 'evil-paste-after)
-        (ad-disable-advice 'evil-visual-paste 'after 'spacemacs/evil-visual-paste)
+        (ad-disable-advice 'evil-visual-paste 'after
+                           'evil-visual-paste-paste-micro-state)
         (ad-activate 'evil-visual-paste))
 
       ;; define text objects
@@ -1084,6 +1097,7 @@ Example: (evil-map visual \"<\" \"<gv\")"
     :init
     (progn
       (setq fci-rule-width 1)
+      (setq fci-rule-color "#D0BF8F")
       ;; manually register the minor mode since it does not define any
       ;; lighter
       (push '(fci-mode "") minor-mode-alist)
@@ -1301,6 +1315,12 @@ Example: (evil-map visual \"<\" \"<gv\")"
             helm-recentf-fuzzy-match t
             helm-semantic-fuzzy-match t)
 
+      (defun spacemacs/helm-find-files-navigate-back (orig-fun &rest args)
+        (if (= (length helm-pattern) (length (helm-find-files-initial-input)))
+            (helm-find-files-up-one-level 1)
+          (apply orig-fun args)))
+      (advice-add 'helm-ff-delete-char-backward :around #'spacemacs/helm-find-files-navigate-back)
+
       (defun spacemacs/helm-do-ack ()
         "Perform a search with ack using `helm-ag.'"
         (interactive)
@@ -1355,7 +1375,7 @@ If ARG is non nil then `ag' and `pt' and ignored."
         "Cl"  'helm-colors
         "ff"  'helm-find-files
         "fr"  'helm-recentf
-        "hb"  'helm-bookmarks
+        "hb"  'helm-pp-bookmarks
         "hi"  'helm-info-at-point
         "hl"  'helm-resume
         "hm"  'helm-man-woman
@@ -1932,6 +1952,14 @@ Put (global-hungry-delete-mode) in dotspacemacs/config to enable by default."
     :config
     (spacemacs|diminish indent-guide-mode " ⓘ" " i")))
 
+(defun spacemacs/init-open-junk-file ()
+  (use-package open-junk-file
+    :defer t
+    :commands (open-junk-file)
+    :init
+    (evil-leader/set-key "fJ" 'open-junk-file)
+    (setq open-junk-file-directory (concat spacemacs-cache-directory "junk/"))))
+
 (defun spacemacs/init-info+ ()
   (use-package info+
     :defer t
@@ -1960,9 +1988,14 @@ Put (global-hungry-delete-mode) in dotspacemacs/config to enable by default."
   (use-package move-text
     :defer t
     :init
-    (evil-leader/set-key
-      "xmj" 'move-text-down
-      "xmk" 'move-text-up)))
+    (spacemacs|define-micro-state move-text
+      :doc "[J] move down [K] move up"
+        :use-minibuffer t
+      :execute-binding-on-enter t
+      :evil-leader "xJ" "xK"
+      :bindings
+      ("J" move-text-down)
+      ("K" move-text-up))))
 
 (defun spacemacs/init-multi-term ()
   (use-package multi-term
@@ -1976,6 +2009,9 @@ Put (global-hungry-delete-mode) in dotspacemacs/config to enable by default."
         (interactive)
         (term-send-raw-string "\t"))
 
+      ;; hack to fix pasting issue, the paste micro-state won't
+      ;; work in multi-term
+      (evil-define-key 'normal term-raw-map "p" 'term-paste)
       (evil-define-key 'insert term-raw-map (kbd "C-c C-d") 'term-send-eof)
       (evil-define-key 'insert term-raw-map (kbd "<tab>") 'term-send-tab))))
 
@@ -2237,7 +2273,7 @@ displayed in the mode-line.")
       (defun spacemacs//customize-powerline-faces ()
         "Alter powerline face to make them work with more themes."
         (set-face-attribute 'powerline-inactive2 nil
-                            :inherit 'font-lock-preprocessor-face))
+                            :inherit 'font-lock-comment-face))
       (spacemacs//customize-powerline-faces)
 
 
@@ -2481,8 +2517,7 @@ It is a string holding:
                projectile-run-shell-command-in-root
                projectile-switch-project
                projectile-switch-to-buffer
-               projectile-vc
-               )
+               projectile-vc)
     :init
     (progn
       (setq-default projectile-enable-caching t)
@@ -2513,7 +2548,14 @@ It is a string holding:
         "pr" 'projectile-replace
         "pR" 'projectile-regenerate-tags
         "py" 'projectile-find-tag
-        "pT" 'projectile-find-test-file))
+        "pT" 'projectile-find-test-file)
+
+      (when (configuration-layer/package-usedp 'multi-term)
+        (defun projectile-multi-term-in-root ()
+          "Invoke `multi-term' in the project's root."
+          (interactive)
+          (projectile-with-default-dir (projectile-project-root) (multi-term)))
+        (evil-leader/set-key "p$t" 'projectile-multi-term-in-root)))
     :config
     (progn
       (projectile-global-mode)
@@ -2736,17 +2778,17 @@ It is a string holding:
     :defer t
     :init
     (progn
-      (spacemacs|add-toggle whitespaces
+      (spacemacs|add-toggle whitespace
                             :status whitespace-mode
                             :on (whitespace-mode)
                             :off (whitespace-mode -1)
-                            :documentation "Display the whitespaces."
+                            :documentation "Display whitespace."
                             :evil-leader "tw")
-      (spacemacs|add-toggle whitespaces-globally
-                            :status whitespace-mode
+      (spacemacs|add-toggle whitespace-globally
+                            :status global-whitespace-mode
                             :on (global-whitespace-mode)
                             :off (global-whitespace-mode -1)
-                            :documentation "Globally display the whitespaces."
+                            :documentation "Globally display whitespace."
                             :evil-leader "t C-w")
       (defun spacemacs//set-whitespace-style-for-diff ()
         "Whitespace configuration for `diff-mode'"
@@ -2771,7 +2813,8 @@ It is a string holding:
                           :background nil)
       (set-face-attribute 'whitespace-indentation nil
                           :background nil)
-      (spacemacs|diminish whitespace-mode " ⓦ" " w"))))
+      (spacemacs|diminish whitespace-mode " ⓦ" " w")
+      (spacemacs|diminish global-whitespace-mode " Ⓦ" " W"))))
 
 (defun spacemacs/init-window-numbering ()
   (use-package window-numbering

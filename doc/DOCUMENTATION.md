@@ -117,6 +117,8 @@
         - [Helm-swoop](#helm-swoop)
     - [Editing](#editing)
         - [Paste text](#paste-text)
+            - [Paste Micro-state](#paste-micro-state)
+            - [Auto-indent pasted text](#auto-indent-pasted-text)
         - [Text manipulation commands](#text-manipulation-commands)
         - [Smartparens Strict mode](#smartparens-strict-mode)
         - [Zooming](#zooming)
@@ -1003,7 +1005,7 @@ If you are not familiar with the `Vim` way of editing text you can try the
 ### Escaping
 
 `Spacemacs` uses [evil-escape][] to easily switch between `insert state` and
-`normal state` by quickly pressing the `fd` keys.
+`normal state` by quickly pressing the <kbd>fd</kbd> keys.
 
 The choice of `fd` was made to be able to use the same sequence to escape from
 "everything" in Emacs:
@@ -1020,6 +1022,11 @@ The choice of `fd` was made to be able to use the same sequence to escape from
 - quit paradox
 - quit gist-list menu
 - hide neotree buffer
+
+If you find yourself in a buffer where the `Spacemacs` (<kbd>SPC</kbd>) or Vim
+keybindings don't work you can use this to get back to `normal state` (for
+example in <kbd>SPC : customize</kbd> press <kbd>fd</kbd> to make
+<kbd>SPC b s</kbd> work again).
 
 This sequence can be customized in your `~/.spacemacs`. Example to set it
 to `jj` (it is important set the variable in `dotspacemacs/init`):
@@ -1438,7 +1445,6 @@ Key Binding            |              Description
 <kbd>SPC b n</kbd>     | switch to next buffer avoiding special buffers
 <kbd>SPC b p</kbd>     | switch to previous buffer avoiding special buffers
 <kbd>SPC b P</kbd>     | copy clipboard and replace buffer (useful when pasting from a browser)
-<kbd>SPC b r</kbd>     | rename the current buffer
 <kbd>SPC b R</kbd>     | revert the current buffer (reload from disk)
 <kbd>SPC b w</kbd>     | toggle read-only (writable state)
 <kbd>SPC b Y</kbd>     | copy whole buffer to clipboard (useful when copying to a browser)
@@ -1475,6 +1481,7 @@ Key Binding                               |                 Description
 <kbd>SPC f F</kbd>                        | open a file using `ido`
 <kbd>SPC f j</kbd>                        | jump to the current buffer file in dired
 <kbd>SPC f o</kbd>                        | open a file using the default external program
+<kbd>SPC f R</kbd>                        | rename the current file
 <kbd>SPC f s</kbd>                        | save a file
 <kbd>SPC f S</kbd>                        | save all files
 <kbd>SPC f r</kbd>                        | open a recent file with `helm`
@@ -1866,6 +1873,8 @@ Key Binding            |                    Description
 
 ### Paste text
 
+#### Paste Micro-state
+
 Whenever you paste some text a `paste` micro-state is initiated. Pressing
 <kbd>p</kbd> again will replace the pasted text with the previous
 yanked (copied) text on the kill ring.
@@ -1884,6 +1893,15 @@ Any other key                 | leave the micro-state
 This micro-state can be disabled by setting
 `dotspacemacs-enable-paste-micro-state` to `nil` in `~/.spacemacs`.
 
+#### Auto-indent pasted text
+
+By default any pasted text will be auto-indented. To paste text un-indented
+use the universal argument.
+
+It is possible to disable the auto-indentation for specific major-modes by
+adding a major-mode to the variable `spacemacs-indent-sensitive-modes` in
+your `dotspacemacs/config` function.
+
 ### Text manipulation commands
 
 Text related commands (start with `x`):
@@ -1896,8 +1914,8 @@ Text related commands (start with `x`):
 <kbd>SPC x g l</kbd>   | set languages used by translate commands
 <kbd>SPC x g t</kbd>   | translate current word using Google Translate
 <kbd>SPC x g T</kbd>   | reverse source and target languages
-<kbd>SPC x m j</kbd>   | move down a line of text
-<kbd>SPC x m k</kbd>   | move up a line of text
+<kbd>SPC x J</kbd>     | move down a line of text (enter micro-state)
+<kbd>SPC x K</kbd>     | move up a line of text (enter micro-state)
 <kbd>SPC x t c</kbd>   | swap (transpose) the current character with the previous one
 <kbd>SPC x t w</kbd>   | swap (transpose) the current word with the previous one
 <kbd>SPC x t l</kbd>   | swap (transpose) the current line with the previous one
@@ -2285,31 +2303,32 @@ To search in a project see [project searching](#searching-in-a-project).
 
 `projectile` commands start with <kbd>p</kbd>:
 
-    Key Binding     |                 Description
---------------------|------------------------------------------------------------
-<kbd>SPC p /</kbd>  | run `ag`
-<kbd>SPC p !</kbd>  | run shell command in root
-<kbd>SPC p &</kbd>  | run async shell command in root
-<kbd>SPC p a</kbd>  | run `ag`
-<kbd>SPC p A</kbd>  | run `ack`
-<kbd>SPC p b</kbd>  | switch to project buffer
-<kbd>SPC p c</kbd>  | compile project using `projectile`
-<kbd>SPC p d</kbd>  | find directory
-<kbd>SPC p D</kbd>  | open project root in `dired`
-<kbd>SPC p f</kbd>  | find file
-<kbd>SPC p g</kbd>  | run `grep`
-<kbd>SPC p h</kbd>  | find file using `helm`
-<kbd>SPC p I</kbd>  | invalidate the projectile cache
-<kbd>SPC p k</kbd>  | kill all project buffers
-<kbd>SPC p o</kbd>  | run `multi-occur`
-<kbd>SPC p p</kbd>  | switch project
-<kbd>SPC p R</kbd>  | regenerate the project's [e|g]tags
-<kbd>SPC p r</kbd>  | replace a string
-<kbd>SPC p s</kbd>  | see [search in project](#searching-in-a-project)
-<kbd>SPC p t</kbd>  | open `NeoTree` in `projectile` root
-<kbd>SPC p T</kbd>  | find test files
-<kbd>SPC p v</kbd>  | open project root in `vc-dir` or `magit`
-<kbd>SPC p y</kbd>  | find tags
+    Key Binding      |                 Description
+---------------------|------------------------------------------------------------
+<kbd>SPC p /</kbd>   | run `ag`
+<kbd>SPC p !</kbd>   | run shell command in root
+<kbd>SPC p &</kbd>   | run async shell command in root
+<kbd>SPC p $ t</kbd> | run multi-term shell in root
+<kbd>SPC p a</kbd>   | run `ag`
+<kbd>SPC p A</kbd>   | run `ack`
+<kbd>SPC p b</kbd>   | switch to project buffer
+<kbd>SPC p c</kbd>   | compile project using `projectile`
+<kbd>SPC p d</kbd>   | find directory
+<kbd>SPC p D</kbd>   | open project root in `dired`
+<kbd>SPC p f</kbd>   | find file
+<kbd>SPC p g</kbd>   | run `grep`
+<kbd>SPC p h</kbd>   | find file using `helm`
+<kbd>SPC p I</kbd>   | invalidate the projectile cache
+<kbd>SPC p k</kbd>   | kill all project buffers
+<kbd>SPC p o</kbd>   | run `multi-occur`
+<kbd>SPC p p</kbd>   | switch project
+<kbd>SPC p R</kbd>   | regenerate the project's [e|g]tags
+<kbd>SPC p r</kbd>   | replace a string
+<kbd>SPC p s</kbd>   | see [search in project](#searching-in-a-project)
+<kbd>SPC p t</kbd>   | open `NeoTree` in `projectile` root
+<kbd>SPC p T</kbd>   | find test files
+<kbd>SPC p v</kbd>   | open project root in `vc-dir` or `magit`
+<kbd>SPC p y</kbd>   | find tags
 
 ## Registers
 

@@ -36,6 +36,7 @@
                                        ("kD" .  "lisp-delete-backward")
                                        ("n" .  "narrow/numbers")
                                        ("p" .  "projects")
+                                       ("p$" .  "projects/shell")
                                        ("q" .  "quit")
                                        ("r" .  "registers/rings")
                                        ("s" .  "search/symbol")
@@ -164,6 +165,9 @@ Can be installed with `brew install trash'."
 
 ;; Save clipboard contents into kill-ring before replace them
 (setq save-interprogram-paste-before-kill t)
+
+;; Single space between sentencs is more widespread than double
+(setq-default sentence-end-double-space nil)
 
 ;; ---------------------------------------------------------------------------
 ;; UI
